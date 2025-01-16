@@ -1,0 +1,27 @@
+name: Build PKG
+on: workflow_dispatch
+jobs:
+  build-pkg:
+    permissions: write-all
+    name: "Build PKG"
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: APT
+      run: |
+        sudo apt update
+        sudo apt install pacman-package-manager makepkg libarchive-tools flatpak -y
+    - name: MakePKG
+      run: |
+        mkdir -p "$HOME/pkg"
+        cp ./PKGBUILD "$HOME/pkg"
+        pushd "$HOME/pkg"
+        makepkg -d
+        popd
+    - name: Release
+      run: |
+        export PKG_FILE=$(find "$HOME/pkg" -maxdepth 1 -type f -name "*.pkg.tar.gz" | head -n 1)
+        gh release create "$(basename "$PKG_FILE" '.pkg.tar.gz')" "$PKG_FILE"
+      env:
+        GITHUB_TOKEN: ${{ github.TOKEN }}
